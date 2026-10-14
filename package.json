@@ -1,0 +1,48 @@
+{
+  "name": "dsh-plugin-notebook-tools",
+  "version": "0.1.0",
+  "description": "Cell-aware Jupyter notebook tools for DSH agents — a zero-dependency port of OpenClaw's openclaw-notebook-tools",
+  "keywords": [
+    "ai-agent",
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "ipynb",
+    "jupyter",
+    "notebook",
+    "plugin"
+  ],
+  "homepage": "https://github.com/Boenxia/dsh-plugin-notebook-tools#readme",
+  "bugs": {
+    "url": "https://github.com/Boenxia/dsh-plugin-notebook-tools/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Boenxia/dsh-plugin-notebook-tools.git"
+  },
+  "author": "Boenxia",
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js"
+  },
+  "files": [
+    "lib/**",
+    "skill/**",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

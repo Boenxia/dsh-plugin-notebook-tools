@@ -1,0 +1,3 @@
+- insert:
+    - id: notebook-tools
+      name: 'dsh-plugin-notebook-tools'
