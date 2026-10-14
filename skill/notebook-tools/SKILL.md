@@ -45,6 +45,11 @@ cell-aware 工具（由 `dsh-plugin-notebook-tools` 注册）：
   注释。代码里的 `#` 只解释**这一行为什么这么写**。
 - **提醒、注意事项用引用块**：`> **注意**: …`、`> ✅ 已完成 …`。
 - 同一章节有多段代码时，**共用一个** markdown 格，不要每格前面都补一个标题。
+- **类型必须对**：首格和每个 `## N.` 标题格的 `cell_type` 必须是 `markdown`。
+  内容长得像 markdown 但类型写成了 `code` 时，JupyterLab 的 `Run All` 会把它当
+  Python 执行，在第一处非注释文字上直接抛
+  `SyntaxError: invalid character '（' (U+FF08)`——而且报错位置往往隔了好几格，
+  很容易误判成别的问题。
 
 > 这是本项目的默认风格。用户明确要求别的排版（英文标题、不编号、或把所有说明
 > 写成代码注释）时，以用户的要求为准。
@@ -95,6 +100,13 @@ JSON）里没有 id 的单元格，会在**每次加载时临时补一个新的�
 - 插入单元格后，把**新的 cell id** 告诉用户。
 - 用户要「干净版 notebook」时，调用 `notebook_clear_outputs` 且不传
   `cell_id`，一次性清空全部输出。
+- **做过排版类重构后，用 `notebook_list_cells` 复核一遍 `cell_type`**（首格与
+  每个 `## N.` 格必须是 `markdown`）。`notebook_validate` 只校验结构，**发现不
+  了「markdown 内容落在 code 格里」**这种错——它能过 validate，却让 `Run All`
+  在第一格就报 SyntaxError。
+- 用户反馈「notebook 不能正常执行」时，先按上一条查 `cell_type`，再看是不是
+  卡在 `input()`：`input()` 所在单元格如果比屏幕还高且顶部可见，JupyterLab
+  原生不会帮你把输入框滚进视野。
 - 在声称「已改好且有效」之前跑一次 `notebook_validate`。
 
 ## 不要做
