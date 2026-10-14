@@ -1,15 +1,15 @@
 ---
 name: notebook-tools
 description: |
-  读取、修改、清理 Jupyter Notebook（.ipynb）时使用。当用户要求查看/编辑/插入/删除
-  notebook 单元格、清空输出、校验 notebook 结构，或按文本搜索 notebook 内容时使用；
-  由 dsh-plugin-notebook-tools 插件提供 9 个 notebook_* 工具。
-whenToUse: '用户提到 .ipynb / Jupyter Notebook / 单元格（cell）、要清空 notebook 输出、要在 notebook 里按文本或正则查找、要批量改代码单元格时。前提：dsh-plugin-notebook-tools 插件已装入当前 profile 并生效。'
+  读取、修改、新建、清理 Jupyter Notebook（.ipynb）时使用。当用户要求查看/编辑/插入/删除
+  notebook 单元格、新建或编写 notebook 脚本、清空输出、校验 notebook 结构，或按文本
+  搜索 notebook 内容时使用；由 dsh-plugin-notebook-tools 插件提供 9 个 notebook_* 工具。
+whenToUse: '用户提到 .ipynb / Jupyter Notebook / 单元格（cell）、要新建或编写 notebook 脚本、要清空 notebook 输出、要在 notebook 里按文本或正则查找、要批量改代码单元格时。前提：dsh-plugin-notebook-tools 插件已装入当前 profile 并生效。'
 metadata:
   authoredBy: ported-from-openclaw-notebook-tools
   source: https://github.com/Lightbridge-KS/openclaw-notebook-tools
-  updatedAt: 2026-10-14T19:05:00.000Z
-  version: 2
+  updatedAt: 2026-10-14T11:28:14.000Z
+  version: 3
 ---
 
 # 处理 Jupyter Notebook
@@ -29,6 +29,25 @@ cell-aware 工具（由 `dsh-plugin-notebook-tools` 注册）：
 | `notebook_insert_cell` | 插入单元格 | 是 |
 | `notebook_delete_cell` | 删除单元格 | 是 |
 | `notebook_clear_outputs` | 清空全部或单个单元格的输出 | 是 |
+
+## notebook 写法约定（风格）
+
+写 notebook 时按下面这套排版。**章节说明一律单独占一个 markdown 单元格**，
+不要把分节标题塞进代码格的注释里：
+
+- **首格**（markdown）：`# 文件名去掉扩展名` → 一句「这个脚本做什么」→ 需要时
+  再加 `## 使用方法` + 有序列表 → 末尾用 `---` 收束。整个 notebook 只用这一个
+  `---`。
+- **每个章节 = 1 个 markdown 格 + 1..n 个代码格**。markdown 格写
+  `## N. 中文标题`（N 从 1 开始），下面接一两句散文（这节做什么、为什么），
+  要罗列要点时再用 `- ` 列表。
+- **代码格里不放分节横幅**：不要 `# =====`、也不要 `# 1. 标题` 这类复制标题的
+  注释。代码里的 `#` 只解释**这一行为什么这么写**。
+- **提醒、注意事项用引用块**：`> **注意**: …`、`> ✅ 已完成 …`。
+- 同一章节有多段代码时，**共用一个** markdown 格，不要每格前面都补一个标题。
+
+> 这是本项目的默认风格。用户明确要求别的排版（英文标题、不编号、或把所有说明
+> 写成代码注释）时，以用户的要求为准。
 
 ## 工作流
 

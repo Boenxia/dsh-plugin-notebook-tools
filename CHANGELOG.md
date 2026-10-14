@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-14
+
+### Added
+
+- A **notebook authoring style** section in the companion skill
+  (`skill/notebook-tools/SKILL.md`). Section commentary belongs in its own
+  markdown cell, one `## N. 中文标题` heading per section, no section banners
+  inside code cells, and callouts as blockquotes. This codifies the layout the
+  tools were originally used to produce; an explicit user request still wins.
+
+### Changed
+
+- The skill `description` and `whenToUse` now list *creating/authoring* notebooks
+  as a trigger, not only reading and cleaning them.
+
 ## [0.1.0] - 2026-10-14
 
 First release: a DSH port of OpenClaw's `openclaw-notebook-tools`.
@@ -56,5 +71,6 @@ Ported behavior-for-behavior from the upstream spec:
   than a hand-rolled POSIX-only path split (upstream's version breaks on
   Windows), and cell ids come from `node:crypto` rather than `nanoid`.
 
-[Unreleased]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Boenxia/dsh-plugin-notebook-tools/releases/tag/v0.1.0
