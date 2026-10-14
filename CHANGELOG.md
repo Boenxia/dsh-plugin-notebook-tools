@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-14
+
+### Added
+
+- A **`cell_type` self-check** in the skill's style section: the first cell and
+  every `## N.` heading cell must be `markdown`. Markdown-prose content typed as
+  `code` is executed as Python and dies on the first non-comment line with
+  `SyntaxError: invalid character '（' (U+FF08)` — a failure that surfaces
+  several cells away from the cell that actually has the wrong type.
+- A **wrong-type trap** in the "after editing" checklist: after any layout
+  refactor, re-check the cell types with `notebook_list_cells`. `notebook_validate`
+  only validates structure, so a markdown body sitting in a code cell passes it
+  and still breaks `Run All` on the first cell.
+
+### Changed
+
+- The troubleshooting order for "the notebook won't run" is now: check
+  `cell_type` first, then check for a cell stuck waiting on `input()`.
+
 ## [0.1.1] - 2026-10-14
 
 ### Added
@@ -71,6 +90,7 @@ Ported behavior-for-behavior from the upstream spec:
   than a hand-rolled POSIX-only path split (upstream's version breaks on
   Windows), and cell ids come from `node:crypto` rather than `nanoid`.
 
-[Unreleased]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Boenxia/dsh-plugin-notebook-tools/releases/tag/v0.1.0
