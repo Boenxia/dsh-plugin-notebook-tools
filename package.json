@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-notebook-tools",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Cell-aware Jupyter notebook tools for DSH agents — a zero-dependency port of OpenClaw's openclaw-notebook-tools",
   "keywords": [
     "ai-agent",
@@ -39,6 +39,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "release": "node scripts/release.mjs",
     "test": "node --test"
   },
   "dsh": {

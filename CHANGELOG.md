@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-15
+
+Releases are a script now, not a habit: `npm run release` verifies the version
+against the CHANGELOG, runs the tests, tags, pushes, and publishes the GitHub
+Release.
+
+### Added
+
+- **`npm run release`** (`scripts/release.mjs`): reads the version from
+  `package.json` and refuses to run unless `CHANGELOG.md` carries a matching,
+  non-empty `## [x.y.z]` section and a `[x.y.z]:` link reference; requires a
+  clean working tree on the release branch with the version bump already
+  committed; runs `node --test`; pushes the release branch; creates the
+  annotated tag `v<x.y.z>`; pushes it; and creates the GitHub Release through
+  the REST API, using the tag annotation as the release title and the CHANGELOG
+  section as its body.
+  Credentials come from `GITHUB_TOKEN` / `GH_TOKEN` or `git credential fill`
+  and are never printed. Flags: `--title`, `--dry-run`, `--skip-tests`,
+  `--branch`, `--remote`.
+- `test/release.test.js`: covers the argument parser, remote URL parsing,
+  CHANGELOG section and link-reference extraction, and token resolution.
+
+### Changed
+
+- `package.json` gains the `release` script. No published file changed.
+
 ## [0.2.0] - 2026-10-15
 
 Fidelity and guard hardening: a notebook now survives a write untouched except
@@ -146,7 +172,8 @@ Ported behavior-for-behavior from the upstream spec:
   than a hand-rolled POSIX-only path split (upstream's version breaks on
   Windows), and cell ids come from `node:crypto` rather than `nanoid`.
 
-[Unreleased]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.1.0...v0.1.1

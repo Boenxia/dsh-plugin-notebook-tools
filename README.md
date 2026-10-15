@@ -128,12 +128,35 @@ node --test          # from this directory
 Tests use `node:test` + `node:assert/strict` and require Node >= 22 (verified
 on Node 24).
 
+## Releasing
+
+Releases are one command, run from a clean `main` that already contains the
+version bump:
+
+```powershell
+npm run release -- --title "v0.2.1 - short one-line summary"
+```
+
+It refuses to run unless `CHANGELOG.md` carries a non-empty `## [<version>]`
+section and a `[<version>]:` link reference for the version in `package.json`,
+the working tree is clean, and HEAD is the commit that carries the bump. Then it
+runs `node --test`, pushes the release branch, creates the annotated tag
+`v<version>`, pushes it, and
+creates the GitHub Release: the tag annotation is the release title and the
+CHANGELOG section is its body. Credentials come from `GITHUB_TOKEN` / `GH_TOKEN`,
+falling back to the stored `git credential` for `github.com` (nothing is ever
+printed); the GitHub CLI is not required.
+
+Other flags: `--dry-run` (print the plan, change nothing), `--skip-tests`,
+`--branch <name>` (default `main`), `--remote <name>` (default `origin`).
+
 ## Layout
 
 ```
 lib/index.js              composition only — registers the 9 tools on ctx.tools
 lib/nb/*.js               pure domain; node: builtins only, no host SDK imports
 lib/tools/*.js            adapters: JSON Schema params, error mapping, response text
+scripts/release.mjs       the release command behind "npm run release"
 test/*.test.js            node:test suites
 cordis.patch.yml          the composition row DSH merges at boot
 skill/notebook-tools/     the companion skill (SKILL.md)
