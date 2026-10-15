@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-15
+
+### Fixed
+
+- `npm run release` compared the tag with HEAD through the bare ref, which for
+  an annotated tag yields the *tag object* rather than the commit it marks — so
+  a tag that did point at HEAD was reported as pointing somewhere else, and
+  re-running a finished release failed. It now compares the peeled commit
+  (`refs/tags/v<x.y.z>^{commit}`). As a result a completed release is a clean
+  no-op: the push and the tag are skipped and the existing GitHub Release is
+  reported instead of being posted a second time.
+
+### Added
+
+- `test/release.test.js` pins the peeling down against a throwaway repository.
+
 ## [0.2.1] - 2026-10-15
 
 Releases are a script now, not a habit: `npm run release` verifies the version
@@ -172,7 +188,8 @@ Ported behavior-for-behavior from the upstream spec:
   than a hand-rolled POSIX-only path split (upstream's version breaks on
   Windows), and cell ids come from `node:crypto` rather than `nanoid`.
 
-[Unreleased]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.1.1...v0.1.2

@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
-import { changelogSection, githubToken, hasLinkRef, parseArgs, parseRemoteUrl } from '../scripts/release.mjs';
+import { changelogSection, git, githubToken, hasLinkRef, parseArgs, parseRemoteUrl, tagCommitRef } from '../scripts/release.mjs';
 
 const SAMPLE = [
   '# Changelog',
@@ -78,4 +81,26 @@ test('parseArgs reads flags, defaults, and inline values', () => {
 test('githubToken prefers the environment over the credential store', () => {
   assert.equal(githubToken({ GITHUB_TOKEN: ' ghp_from_env ' }), 'ghp_from_env');
   assert.equal(githubToken({ GH_TOKEN: 'gho_fallback' }), 'gho_fallback');
+});
+
+test('tagCommitRef peels an annotated tag down to the commit it marks', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'release-tag-'));
+  try {
+    git(['init', '-q'], { cwd: dir });
+    git(['config', 'user.email', 'release-test@example.test'], { cwd: dir });
+    git(['config', 'user.name', 'Release Test'], { cwd: dir });
+    writeFileSync(join(dir, 'file.txt'), 'hi\n');
+    git(['add', '.'], { cwd: dir });
+    git(['commit', '-q', '-m', 'first'], { cwd: dir });
+    git(['tag', '-a', 'v9.9.9', '-m', 'annotated tag'], { cwd: dir });
+
+    const head = git(['rev-parse', 'HEAD'], { cwd: dir }).out;
+    // The bare ref is the tag object itself, so it never equals HEAD …
+    assert.notEqual(git(['rev-parse', 'refs/tags/v9.9.9'], { cwd: dir }).out, head);
+    // … while the peeled ref is the commit the tag marks.
+    assert.equal(git(['rev-parse', '-q', '--verify', tagCommitRef('v9.9.9')], { cwd: dir }).out, head);
+    assert.equal(git(['rev-parse', '-q', '--verify', tagCommitRef('v9.9.8')], { cwd: dir, allowFailure: true }).ok, false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

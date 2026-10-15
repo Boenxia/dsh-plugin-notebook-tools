@@ -128,8 +128,17 @@ export function createRelease({ owner, repo, tag, title, notes, token }) {
   });
 }
 
-function git(args, { allowFailure = false } = {}) {
-  const result = spawnSync('git', args, { cwd: ROOT, encoding: 'utf8' });
+/**
+ * The revision expression that peels a tag down to the commit it points at.
+ * Without the peel, `git rev-parse refs/tags/v1` returns the *tag object* for an
+ * annotated tag, which never equals HEAD.
+ */
+export function tagCommitRef(tag) {
+  return `refs/tags/${tag}^{commit}`;
+}
+
+export function git(args, { allowFailure = false, cwd = ROOT } = {}) {
+  const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
   const ok = result.status === 0;
   if (!ok && !allowFailure) {
     throw new Error(`git ${args.join(' ')} failed (${result.status}): ${(result.stderr ?? '').trim()}`);
@@ -180,7 +189,7 @@ export async function main(argv = process.argv.slice(2)) {
     throw new Error(`HEAD still carries version ${headPkg.version}; commit the ${version} bump first`);
   }
 
-  const localTag = git(['rev-parse', '-q', '--verify', `refs/tags/${tag}`], { allowFailure: true });
+  const localTag = git(['rev-parse', '-q', '--verify', tagCommitRef(tag)], { allowFailure: true });
   if (localTag.ok && localTag.out !== head) {
     throw new Error(`tag ${tag} exists but points at ${localTag.out}, not HEAD (${head})`);
   }
