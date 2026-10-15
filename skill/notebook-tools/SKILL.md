@@ -8,8 +8,8 @@ whenToUse: '用户提到 .ipynb / Jupyter Notebook / 单元格（cell）、要�
 metadata:
   authoredBy: ported-from-openclaw-notebook-tools
   source: https://github.com/Lightbridge-KS/openclaw-notebook-tools
-  updatedAt: 2026-10-14T11:28:14.000Z
-  version: 3
+  updatedAt: 2026-10-15T00:00:00.000Z
+  version: 4
 ---
 
 # 处理 Jupyter Notebook
@@ -62,33 +62,57 @@ cell-aware 工具（由 `dsh-plugin-notebook-tools` 注册）：
 3. **按需精确读**：需要正文时才用 `notebook_read`，配合 `cell_ids`、
    `cell_range`，只在必要时加 `include_outputs`。
 4. **用 `cell_id` 定位，不要用下标**：任何插入/删除都会让下标漂移，
-   cell id 则跨操作稳定（稳定性边界见下）。
+   cell id 则跨操作稳定（稳定性见下）。
 5. **能用就带上陈旧校验**：改动前把最近一次结果里的小票传进去，避免覆盖别人
-   期间的修改——但**只有这两个来源有效**，别臆造：
+   期间的修改——但**只有这几个来源有效**，别臆造：
+   - `expected_file_sha256` ← **`notebook_read`** 或 **`notebook_list_cells`**
+     返回的 `file_sha256`。这是最强的一道：整份文件任何一个字节变了都会拦下，
+     连「同一毫秒内被重写」也拦得住。**首选它。**
    - `expected_source_sha256` ← 只有 **`notebook_read`** 返回 `source_sha256`；
-     `notebook_list_cells` / `notebook_search` **不返回**它。
+     `notebook_list_cells` / `notebook_search` **不返回**它。它守的是**单个
+     单元格**：`edit_cell` / `delete_cell` 守目标格，`insert_cell` 守
+     `anchor_id` 那一格，`clear_outputs` 守指定格。
    - `expected_file_mtime_ms` ← **`notebook_read`** 或 **`notebook_list_cells`**
      返回的 `mtime_ms`；`notebook_search` / `notebook_validate` **不返回**。
 6. **改，而不是重写**：改内容用 `notebook_edit_cell`，加单元格用
    `notebook_insert_cell`，改完用 `notebook_validate` 收尾。
 
-## cell id 的稳定性边界（重要）
+## 写入的保真度（重要）
 
-只有**已经写在磁盘上**的 id 才稳定。老 notebook（nbformat < 4.5 或手工拼的
-JSON）里没有 id 的单元格，会在**每次加载时临时补一个新的随机 id**，只有等到
-下一次「写」操作才会落盘。所以：
+本工具集**只改你要求改的那一处**，其余部分原样写回：
 
-- 刚 `list` / `read` 拿到 id 后，如果**中间没发生过任何写操作**，不要拿这个
-  id 去跨调用定位——下次加载它会换一个。
-- 稳妥顺序是：先做一次写操作（或直接 `notebook_create`）把 id 固化，再按 id
-  定位。
-- `notebook_create` 新建的、以及任何一次写操作保留下来的 id 都是稳定的。
+- **保留原文件的排版**：JSON 缩进（0/1/2/4 空格）、行尾（LF / CRLF）、末尾有没有
+  换行，都按读到的样子写回。JupyterLab、`nbformat.writes`、或手工编辑产生的
+  notebook 不会被重新格式化。
+- **不凭空添加字段**：某单元格原本没有 `outputs` / `execution_count` / `metadata`
+  键，写回后仍然没有。
+- **`source` 的形态保持原样**：原本是字符串就写回字符串，原本是「一行一个元素的
+  数组」就写回数组。
+- 所以「读进来 → 什么都没改 → 写回去」是**逐字节相同**的。
+
+**无法保真的三种情况**（会被规整成默认风格：1 空格缩进、键序排序）：
+① 用 Tab 缩进的文件；② 非 ASCII 字符在文件里是 `\uXXXX` 转义的（Python
+`json.dump` 默认 `ensure_ascii=True` 的产物）；③ 文件末尾有两个以上空行。
+遇到这三种，先告诉用户该文件会被重新排版，再动手。
+
+## cell id 的稳定性
+
+- **已经写在磁盘上的 id 永远稳定**（`notebook_create` 新建的、以及任何一次写操作
+  保留下来的 id 都属于此类）。
+- 老 notebook（nbformat < 4.5，或手工拼的 JSON）里没有 id 的单元格，会按内容
+  **推导**出一个确定性 id（形如 `sn` + 6 位小写 base36，例：`snfb4flq`）。它**每次
+  加载都一样**，跨调用、跨进程稳定，可以直接拿去做 `cell_id`——不必先写一次来「固化」。
+- 但推导 id 绑定的是「位置 + 源码」，所以：改掉某格的源码、或在它前面插入/删除
+  单元格，都会让它的推导 id 变化。**连续多次编辑时，每次改完重新 `list` 一次取新
+  id**，不要沿用上一轮拿到的。
+- 只有 nbformat ≥ 4.5 的文件才会把 id 真的写进磁盘；补 id **不会**抬高
+  `nbformat_minor`，也不会改动 `nbformat`。
 
 ## 返回值形态
 
 - 只读工具（`notebook_read` / `notebook_list_cells` / `notebook_search` /
   `notebook_validate`）返回 **JSON 文本**，可直接解析取 `cells[].id`、
-  `source_sha256`、`mtime_ms`。
+  `source_sha256`、`file_sha256`、`mtime_ms`。
 - 写工具（`notebook_create` / `edit_cell` / `insert_cell` / `delete_cell` /
   `clear_outputs`）返回**人类可读的一句话**（含新 id、下标、字符数变化），
   不要按 JSON 解析。
@@ -107,6 +131,10 @@ JSON）里没有 id 的单元格，会在**每次加载时临时补一个新的�
 - 用户反馈「notebook 不能正常执行」时，先按上一条查 `cell_type`，再看是不是
   卡在 `input()`：`input()` 所在单元格如果比屏幕还高且顶部可见，JupyterLab
   原生不会帮你把输入框滚进视野。
+- **写操作会先做一次深层结构校验**：cell id 重复或不合规
+  （正则 `^[A-Za-z0-9_-]{1,64}$`）、`metadata` 存在但不是对象、code 格的
+  `outputs` 存在但不是数组、`source` 数组里混进非字符串——任一条都会**直接拒写**
+  （抛 `INVALID_NOTEBOOK`，文件保持原样）。遇到这种报错先修结构，别反复重试。
 - 在声称「已改好且有效」之前跑一次 `notebook_validate`。
 
 ## 不要做
@@ -116,5 +144,7 @@ JSON）里没有 id 的单元格，会在**每次加载时临时补一个新的�
   JupyterLab 里自己跑。
 - 不要跨多次工具调用沿用下标定位单元格——要么重新 list，要么只用 id。
 - 不要在没用过工具的情况下凭记忆猜 cell id 或单元格数量。
+- 不要臆造 `file_sha256` / `source_sha256` / `mtime_ms`：这三个值只能从只读工具的
+  返回里取，猜出来的会让写操作必然报 `STALE_NOTEBOOK`。
 - 不要对 `.ipynb` 用 `notebook_validate` 以外的「结构校验」手段；本工具集
   不校验内核可执行性，只校验 notebook 结构。

@@ -17,12 +17,12 @@ const SAMPLE = {
     {
       cell_type: 'code',
       id: 'aaaaaaaa',
-      source: 'import os\nprint(os.getcwd())\n',
+      source: ['import os\n', 'print(os.getcwd())\n'],
       metadata: {},
       execution_count: null,
       outputs: [],
     },
-    { cell_type: 'markdown', id: 'bbbbbbbb', source: '# head\n', metadata: {} },
+    { cell_type: 'markdown', id: 'bbbbbbbb', source: ['# head\n'], metadata: {} },
   ],
 };
 
@@ -44,14 +44,23 @@ test('temp path is a dot-prefixed sibling of the target, never the system temp d
   assert.equal(seen.size, 50);
 });
 
-test('serializeNotebook writes 1-space indent and string-array sources', () => {
+test('serializeNotebook writes the Jupyter layout and never reshapes a source', () => {
   const text = serializeNotebook({
     nbformat: 4,
     nbformat_minor: 5,
     metadata: {},
-    cells: [{ cell_type: 'code', id: 'x', source: 'a\nb', metadata: {}, execution_count: null, outputs: [] }],
+    cells: [
+      {
+        cell_type: 'code',
+        id: 'x',
+        source: ['a\n', 'b'],
+        metadata: {},
+        execution_count: null,
+        outputs: [],
+      },
+    ],
   });
-  assert.ok(text.startsWith('{\n "nbformat": 4'), '1-space indent at depth 1');
+  assert.ok(text.startsWith('{\n "cells": ['), '1-space indent at depth 1, keys sorted');
   const parsedForIndent = JSON.parse(text);
   assert.equal(text, JSON.stringify(parsedForIndent, null, 1), 'exactly 1-space JSON indent');
   assert.notEqual(text, JSON.stringify(parsedForIndent, null, 2), 'never 2-space');
@@ -59,6 +68,19 @@ test('serializeNotebook writes 1-space indent and string-array sources', () => {
   assert.deepEqual(parsed.cells[0].source, ['a\n', 'b']);
   assert.equal(parsed.nbformat, 4);
   assert.equal(parsed.nbformat_minor, 5);
+});
+
+test('serializeNotebook preserves the source shape it is handed', () => {
+  // A loaded notebook is serialized exactly as parsed; normalizing a string
+  // source into a line array here would rewrite bytes the user never touched.
+  const text = serializeNotebook({
+    nbformat: 4,
+    nbformat_minor: 5,
+    metadata: {},
+    cells: [{ cell_type: 'markdown', id: 'y', source: '# hi\n', metadata: {} }],
+  });
+  assert.equal(JSON.parse(text).cells[0].source, '# hi\n');
+  assert.equal(text.endsWith('\n'), false, 'pure serialization adds no trailing newline');
 });
 
 test('a successful save leaves no temp artifacts behind', async () => {

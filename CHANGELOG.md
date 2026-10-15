@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-15
+
+Fidelity and guard hardening: a notebook now survives a write untouched except
+for the edit you asked for, and every mutating tool can be guarded by a content
+hash rather than a timestamp. Ported back from the Python CLI skill that had
+grown these properties first.
+
+### Added
+
+- **Layout-preserving serialization.** `lib/nb/style.js` probes the layout a
+  notebook already uses — JSON indent (0/1/2/4), CRLF vs LF, and whether the
+  file ends with a newline — and writes it back in that same layout. Cells whose
+  `source` is a plain string stay a string; keys that were absent
+  (`outputs`, `execution_count`, `metadata`) are not invented. A file that is
+  read and written back unmodified is byte-identical, which makes the plugin
+  safe to point at notebooks produced by JupyterLab, `nbformat.writes`, or hand
+  editing. Known limits: tab indentation, `\uXXXX`-escaped non-ASCII (Python's
+  `ensure_ascii=True`), and more than one trailing newline are normalized to the
+  tool's defaults.
+- **`expected_file_sha256` on all four mutating tools.** `expected_file_mtime_ms`
+  cannot see a rewrite that happens inside the same millisecond; the content
+  hash can. `notebook_read` and `notebook_list_cells` now return `file_sha256`
+  so the value never has to be guessed.
+- **`expected_source_sha256` on `notebook_insert_cell` (its anchor cell) and
+  `notebook_clear_outputs` (its target cell).** Every mutating tool now accepts
+  the same three guards.
+- **Deterministic ids for notebooks too old to store them.** A missing cell id
+  is derived from `sha256("v1|<ordinal>|<source>")` instead of random bytes, so
+  the same cell gets the same id on every load, across processes.
+- **Structure validation before every write.** The save path runs the deep
+  audit and refuses to write a notebook that fails it — cell ids must match
+  `^[A-Za-z0-9_-]{1,64}$` and be unique, `metadata` must be an object when
+  present, a code cell's `outputs` must be an array when present, and every
+  element of a `source` array must be a string. `notebook_validate` reports the
+  same deep problems.
+- `test/fidelity.test.js` — byte-for-byte round trips across six file layouts,
+  deterministic id behavior at nbformat 4.4 and 4.5, guard coverage for all four
+  writers, append-only behavior for an unedited cell, and the documented
+  non-preservable cases. Suite: 61 → 75 assertions.
+
+### Changed
+
+- **Writes no longer reformat the whole file.** The old save path rebuilt the
+  document and forced a 1-space indent, which reformatted every notebook it
+  touched (and silently dropped unknown root keys).
+- **`nbformat_minor` is no longer bumped.** Backfilling an id never changes the
+  declared notebook format.
+
+### Fixed
+
+- README and CHANGELOG claimed id backfill "bumps `nbformat_minor` to 5". No
+  code path ever did that; the documentation now matches the implementation.
+- A notebook that is valid enough to inspect but structurally broken is now
+  reported by `notebook_validate` and refused by the writers, instead of being
+  silently loaded and rewritten.
+
 ## [0.1.2] - 2026-10-14
 
 ### Added
@@ -90,7 +146,8 @@ Ported behavior-for-behavior from the upstream spec:
   than a hand-rolled POSIX-only path split (upstream's version breaks on
   Windows), and cell ids come from `node:crypto` rather than `nanoid`.
 
-[Unreleased]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Boenxia/dsh-plugin-notebook-tools/releases/tag/v0.1.0

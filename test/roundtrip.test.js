@@ -210,7 +210,8 @@ test('create → read → list → search → edit → insert → delete → cle
   }
   const text = await readFile(path, 'utf-8');
   assert.match(text, /\n \}/, 'saved with a 1-space JSON indent');
-  assert.equal(text.endsWith('\n'), false, 'JSON.stringify output, no trailing newline added');
+  assert.equal(text.endsWith('\n'), true, 'one trailing newline, like JupyterLab writes');
+  assert.equal(text.endsWith('\n\n'), false, 'and only one');
   assert.deepEqual(await tempLeftovers(dir), [], 'no temp files left behind');
 });
 

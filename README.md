@@ -7,7 +7,7 @@ host.
 The core `read` / `write` / `edit` tools treat `.ipynb` files as opaque JSON,
 which is error-prone, token-hungry, and easy to corrupt. This plugin provides a
 structured, cell-aware API instead: stable cell ids, output-aware truncation,
-stale-edit guards, and atomic writes.
+stale-edit guards, and format-preserving atomic writes.
 
 ## Install
 
@@ -64,22 +64,38 @@ unlike the plugin itself, which is composed at boot.
 
 ## Guarantees
 
-- **Atomic saves.** Mutations serialize with a 1-space JSON indent and write to
-  a sibling temp file (`.‹basename›.tmp-‹pid›-‹counter›-‹random›`) in the same
-  directory, `fsync` it, then `rename` over the target. A killed process can
-  never leave a half-written notebook, and no temp file ever lands in the system
-  temp directory.
+- **Writes preserve the file's own formatting.** The plugin probes the layout a
+  notebook already uses — JSON indent (0/1/2/4), CRLF vs LF, trailing newline —
+  and writes it back unchanged, so a notebook produced by JupyterLab,
+  `nbformat.writes`, or a text editor is not reformatted. A cell whose `source`
+  is a plain string stays a string, and keys that were absent (`outputs`,
+  `execution_count`, `metadata`) are not invented. Read-then-write with no edit
+  is byte-identical. Not preserved: tab indentation, `\uXXXX`-escaped non-ASCII
+  (Python's `ensure_ascii=True`), and more than one trailing newline.
+- **Atomic saves.** Mutations serialize to a sibling temp file
+  (`.‹basename›.tmp-‹pid›-‹counter›-‹random›`) in the same directory, `fsync` it,
+  then `rename` over the target. A killed process can never leave a half-written
+  notebook, and no temp file ever lands in the system temp directory.
+- **Validation before every write.** A notebook that fails the deep audit — cell
+  ids outside `^[A-Za-z0-9_-]{1,64}$` or duplicated, non-object `metadata`,
+  non-array `outputs`, non-string `source` elements — is refused by the writers
+  and reported by `notebook_validate`, instead of being silently rewritten.
 - **Cell ids over indexes.** `notebook_read`, `notebook_list_cells`, and
-  `notebook_search` always return an `id`; missing ids are backfilled in memory
-  and persisted on the next save (bumping `nbformat_minor` to 5). Indexes shift
-  after every insert/delete — prefer ids.
+  `notebook_search` always return an `id`. A notebook too old to store ids
+  (nbformat < 4.5) gets ids derived from `sha256("v1|<ordinal>|<source>")`, so
+  the same cell keeps the same id across loads and processes; the derived id is
+  persisted only once the file's format supports ids. `nbformat_minor` is never
+  bumped. Indexes shift after every insert/delete — prefer ids.
 - **Editing a code cell clears `outputs` and `execution_count`,** and the
   response text says so.
-- **Stale-edit guards.** `expected_source_sha256` and `expected_file_mtime_ms`
-  fail the operation *before* any write when the notebook changed underneath
-  you. mtime comparison tolerates sub-millisecond jitter.
-- **Source on disk is a string array** (one line per element, trailing `\n`);
-  tools return the joined string.
+- **Three stale-edit guards on every mutating tool.** `expected_file_sha256`
+  catches any change to the bytes on disk — including a rewrite inside the same
+  millisecond, which `expected_file_mtime_ms` cannot see; `expected_source_sha256`
+  catches a change to the one cell an operation depends on (the anchor cell for
+  an insert, the target cell for an edit, delete, or clear); the mtime check is
+  the cheap one and tolerates sub-millisecond jitter. All of them fail *before*
+  any write. `notebook_read` and `notebook_list_cells` return both `mtime_ms`
+  and `file_sha256`; only `notebook_read` returns per-cell `source_sha256`.
 - **nbformat 4 only.** v3 and earlier are rejected.
 - **No kernel execution, ever.**
 - **Failures throw** a `NotebookError` subclass carrying a stable `code`
@@ -94,9 +110,14 @@ notebook_read        { path: "~/analysis.ipynb", cell_ids: ["a1b2c3d4"] }
 notebook_search      { path: "~/analysis.ipynb", query: "train_test_split" }
 notebook_edit_cell   { path: "~/analysis.ipynb", cell_id: "a1b2c3d4",
                        new_source: "model.fit(X, y)\n",
-                       expected_source_sha256: "…" }
+                       expected_source_sha256: "…",
+                       expected_file_sha256: "…" }
 notebook_validate    { path: "~/analysis.ipynb" }
 ```
+
+Pass the guards straight back from the read that produced them — `file_sha256`
+comes from `notebook_read` or `notebook_list_cells`, `source_sha256` only from
+`notebook_read`.
 
 ## Development
 

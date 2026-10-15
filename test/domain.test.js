@@ -7,6 +7,7 @@ import test, { after } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  idOf,
   newCellId,
   normalizeSourceIn,
   normalizeSourceOut,
@@ -284,14 +285,21 @@ test('loadNotebook reads the minimal fixture and round-trips it', async () => {
   assert.equal(nb.metadata.kernelspec.name, 'python3');
 });
 
-test('loadNotebook backfills missing ids in memory (fixture has nbformat_minor 4)', async () => {
+test('loadNotebook derives deterministic ids for cells without one (fixture has nbformat_minor 4)', async () => {
   const nb = await loadNotebook(fixture('with_outputs.ipynb'));
   assert.equal(nb.nbformat_minor, 4);
-  for (const cell of nb.cells) {
-    assert.match(cell.id, /^[A-Za-z0-9]{8}$/, 'generated, not persisted');
-  }
+  const ids = nb.cells.map((cell) => idOf(cell));
+  for (const id of ids) assert.match(id, /^sn[a-z0-9]{6}$/, 'derived from the source, not random');
+  assert.equal(nb.backfilled, 2);
+
+  // Deterministic across loads, so list → edit addresses the same cell even in
+  // a notebook that cannot store an id.
+  const again = await loadNotebook(fixture('with_outputs.ipynb'));
+  assert.deepEqual(again.cells.map((cell) => idOf(cell)), ids);
+
   const onDisk = JSON.parse(await readFile(fixture('with_outputs.ipynb'), 'utf-8'));
   assert.equal('id' in onDisk.cells[0], false, 'fixture on disk is untouched');
+  assert.equal('id' in onDisk.cells[1], false, 'no id is invented below nbformat 4.5');
 });
 
 test('loadNotebook maps filesystem and parse failures to typed errors', async () => {
