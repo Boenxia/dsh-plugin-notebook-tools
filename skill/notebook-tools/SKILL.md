@@ -8,8 +8,8 @@ whenToUse: '用户提到 .ipynb / Jupyter Notebook / 单元格（cell）、要�
 metadata:
   authoredBy: ported-from-openclaw-notebook-tools
   source: https://github.com/Lightbridge-KS/openclaw-notebook-tools
-  updatedAt: 2026-10-15T00:00:00.000Z
-  version: 4
+  updatedAt: 2026-10-15T13:49:45.000Z
+  version: 5
 ---
 
 # 处理 Jupyter Notebook
@@ -84,11 +84,15 @@ cell-aware 工具（由 `dsh-plugin-notebook-tools` 注册）：
 - **保留原文件的排版**：JSON 缩进（0/1/2/4 空格）、行尾（LF / CRLF）、末尾有没有
   换行，都按读到的样子写回。JupyterLab、`nbformat.writes`、或手工编辑产生的
   notebook 不会被重新格式化。
-- **不凭空添加字段**：某单元格原本没有 `outputs` / `execution_count` / `metadata`
-  键，写回后仍然没有。
+- **不凭空添加字段**：**没被改动**的单元格，原本没有 `outputs` /
+  `execution_count` / `metadata` 键，写回后仍然没有。
 - **`source` 的形态保持原样**：原本是字符串就写回字符串，原本是「一行一个元素的
   数组」就写回数组。
-- 所以「读进来 → 什么都没改 → 写回去」是**逐字节相同**的。
+- 所以「读进来 → 什么都没改 → 写回去」对**没被改动的**格子是**逐字节相同**的。
+- **唯一的例外是你编辑的那一格**：编辑一个 code 格必然写入 `outputs: []` 与
+  `execution_count: null`——这就是「清空输出」的语义，不是格式漂移；这两个键
+  原本不存在时会被**追加在键序末尾**（键序因此变成 `cell_type` / `metadata` /
+  `source` / `outputs` / `execution_count`）。在意字节级 diff 时先说清这一点。
 
 **无法保真的三种情况**（会被规整成默认风格：1 空格缩进、键序排序）：
 ① 用 Tab 缩进的文件；② 非 ASCII 字符在文件里是 `\uXXXX` 转义的（Python

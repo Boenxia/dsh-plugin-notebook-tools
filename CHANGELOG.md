@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-10-15
+
+### Fixed
+
+- The skill's fidelity section claimed that nothing is ever invented, full stop.
+  The cell you edit is the exception: editing a code cell writes `outputs` and
+  `execution_count` — that is what "clear the outputs" means — so a cell that
+  carried neither key gains both, appended at the end of its key order. Only
+  *untouched* cells keep their exact shape. The wording now says so, bullet by
+  bullet, instead of leaving the reader to discover it from a byte diff.
+  Verified end to end against a hand-written nbformat 4.4 file (2-space indent,
+  CRLF, no trailing newline, no cell ids): the untouched cells kept their array
+  `source` and their `outputs`/`execution_count` and were not given an `id`; the
+  file kept its indent, its CRLF and its missing trailing newline; the edited
+  cell alone came back with the two keys appended.
+
 ## [0.2.2] - 2026-10-15
 
 ### Fixed
@@ -188,7 +204,8 @@ Ported behavior-for-behavior from the upstream spec:
   than a hand-rolled POSIX-only path split (upstream's version breaks on
   Windows), and cell ids come from `node:crypto` rather than `nanoid`.
 
-[Unreleased]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Boenxia/dsh-plugin-notebook-tools/compare/v0.1.2...v0.2.0
